@@ -37,8 +37,8 @@ const pad = (n, w = 4) => String(n).padStart(w, '0')
 
 async function guard() {
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_RESET !== '1') {
-    console.error('[demo] ОТКАЗ: NODE_ENV=production. Демо-сброс запрещён на боевой установке.')
-    console.error('[demo] Если это точно тестовый стенд — задайте ALLOW_DEMO_RESET=1.')
+    console.error('[demo] ОТКАЗ: NODE_ENV=production.')
+    console.error('[demo] — задайте ALLOW_DEMO_RESET=1.')
     process.exit(1)
   }
   const acts = await db.act.count()
@@ -128,7 +128,7 @@ async function main() {
         data: {
           actId: act.id, kind: 'analysis', state: 'on_analysis', quantity: onAnalysis,
           serial: serials[1] || serials[0], labelNumber: `Я-${pad(actNo)}-А`,
-          description: 'На анализ разработчику', reportedBy: 'Т-02',
+          description: 'На анализ ', reportedBy: 'Т-02',
         },
       })
     }

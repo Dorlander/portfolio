@@ -1,0 +1,9 @@
+node_modules/
+client/dist/
+server/data/
+server/uploads/
+
+server/data/.jwt-secret
+server/data/*.db
+server/data/*.db-*
+client/dist/

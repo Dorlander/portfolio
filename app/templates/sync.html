@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Синхронизация с Excel{% endblock %}
+{% block content %}
+<h1>Excel</h1>
+
+<div class="cols">
+    <section class="panel">
+        <h2>Автоматическая синхронизация</h2>
+        {% if sync.enabled %}
+        <dl class="facts">
+            <dt>Общий Excel-журнал (вход)</dt><dd>{{ sync.import_file or '— не задан' }}</dd>
+            <dt>Файл-отчёт (выход)</dt><dd>{{ sync.export_file or '— не задан' }}</dd>
+            <dt>Период проверки</dt><dd>{{ sync.interval }} сек</dd>
+            <dt>Последний импорт</dt><dd>{{ sync.last_import or '—' }}</dd>
+            <dt>Последний экспорт</dt><dd>{{ sync.last_export or '—' }}</dd>
+            {% if sync.last_error %}<dt class="warn">Ошибка</dt><dd class="warn">{{ sync.last_error }}</dd>{% endif %}
+        </dl>
+        {% else %}
+        <p class="muted">Автосинхронизация выключена. Задайте переменные окружения
+            <code>SYNC_IMPORT_FILE</code> (файл, который редактирует начальство) и
+            <code>SYNC_EXPORT_FILE</code> (файл-отчёт из базы) и перезапустите сервис —
+            дальше всё будет само: изменили Excel → база обновилась, изменилась база →
+            отчёт переписан.</p>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <h2>Вручную</h2>
+        <form method="post" action="/sync/import" enctype="multipart/form-data" class="grid-form">
+            <label>Импорт журнала (.xlsx) <input type="file" name="file" accept=".xlsx" required></label>
+            <button type="submit">Загрузить в базу</button>
+        </form>
+        <p><a href="/sync/export" class="button">⬇ Скачать журнал (.xlsx)</a></p>
+        <p class="muted">Импорт не создаёт дублей: записи сверяются по паре № акта + изделие,
+            существующие обновляются.</p>
+    </section>
+</div>
+
+<section class="panel">
+    <h2>История синхронизаций</h2>
+    <table>
+        <thead><tr><th>Когда</th><th>Направление</th><th>Источник</th><th>Создано</th><th>Обновлено</th><th>Пропущено</th></tr></thead>
+        <tbody>
+        {% for l in logs %}
+        <tr>
+            <td>{{ l.at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+            <td>{{ 'импорт' if l.direction == 'import' else 'экспорт' }}</td>
+            <td>{{ l.source }}</td>
+            <td>{{ l.created }}</td>
+            <td>{{ l.updated }}</td>
+            <td>{{ l.skipped }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty">Синхронизаций ещё не было</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

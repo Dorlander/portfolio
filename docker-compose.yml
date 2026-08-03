@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/srv/data
+      # сетевая папка с общим Excel-журналом — примонтируйте и укажите пути ниже
+      # - /mnt/share:/srv/share
+    environment:
+      SYNC_IMPORT_FILE: ""   # например /srv/share/журнал.xlsx
+      SYNC_EXPORT_FILE: ""   # например /srv/share/отчёт_из_системы.xlsx
+      SYNC_INTERVAL: "30"
+    restart: unless-stopped

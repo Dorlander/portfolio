@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Журнал — Производственный учёт{% endblock %}
+{% block content %}
+<h1>Журнал актов</h1>
+
+<details class="panel" {% if not batches %}open{% endif %}>
+    <summary>➕ Приём продукции со склада</summary>
+    <form method="post" action="/batches/create" class="grid-form">
+        <label>№ акта <input name="act_number" required></label>
+        <label>Изделие <input name="product" list="products-list" required></label>
+        <datalist id="products-list">
+            {% for p in products %}<option value="{{ p }}">{% endfor %}
+        </datalist>
+        <label>Кол-во <input name="quantity" type="number" min="1" required></label>
+        <label>Взял в работу (подпись!) <input name="taken_by" placeholder="Т-25 / Фамилия"></label>
+        <label class="checkbox"><input type="checkbox" name="input_control" value="1" checked> Нужен входной контроль</label>
+        <label>Примечание <input name="note"></label>
+        <button type="submit">Принять</button>
+    </form>
+</details>
+
+<form method="get" class="filters">
+    <select name="status" onchange="this.form.submit()">
+        <option value="">— все статусы —</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if s == f_status %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select>
+    <select name="product" onchange="this.form.submit()">
+        <option value="">— все изделия —</option>
+        {% for p in products %}
+        <option value="{{ p }}" {% if p == f_product %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+    </select>
+    <input name="q" value="{{ f_q }}" placeholder="поиск: акт, примечание...">
+    <button type="submit">Найти</button>
+    {% if f_status or f_product or f_q %}<a href="/">сбросить</a>{% endif %}
+</form>
+
+<table class="journal">
+    <thead>
+    <tr>
+        <th>Дата</th><th>Время</th><th>Изделие</th><th>Акт</th><th>Кол-во</th>
+        <th>Акт несоот.</th><th>В рем.</th><th>Статус</th>
+        <th>К отгрузке</th><th>Факт отгр.</th><th>Вых. контроль</th><th>Примечание</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for b in batches %}
+    <tr class="clickable" onclick="location='/batches/{{ b.id }}'">
+        <td>{{ b.accepted_at.strftime('%d.%m.%Y') if b.accepted_at else '—' }}</td>
+        <td>{{ b.accepted_at.strftime('%H:%M') if b.accepted_at else '' }}</td>
+        <td><b>{{ b.product }}</b></td>
+        <td>{{ b.act_number }}</td>
+        <td>{{ b.quantity }}</td>
+        <td>{{ b.nc_act_number or '' }}</td>
+        <td>{% if b.repair_qty %}<span class="warn">{{ b.repair_qty }}</span>{% endif %}</td>
+        <td><span class="status s-{{ b.status | replace(' ', '-') }}">{{ b.status }}</span></td>
+        <td>{{ b.planned_ship_at.strftime('%d.%m %H:%M') if b.planned_ship_at else '' }}</td>
+        <td>{{ b.actual_ship_at.strftime('%d.%m %H:%M') if b.actual_ship_at else '' }}</td>
+        <td>{{ b.output_control_by or '' }}</td>
+        <td class="note">{{ b.note or '' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="12" class="empty">Журнал пуст — примите первую партию или загрузите Excel на вкладке «Excel»</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+!README.md
+.env*
+!.env.example
+dev.log
+server.log
+*.db
+*.db-journal
+.DS_Store
+coverage
+.nyc_output
+.cache

@@ -1,0 +1,54 @@
+# LocalChat: API + веб + OnlyOffice (документы Word/Excel в группах).
+#
+# Запуск:  docker compose up --build -d
+# HTTP:    http://localhost:3780
+# OnlyOffice: порт на хосте задаётся ONLYOFFICE_PORT в .env (по умолчанию 8081)
+#
+# Доступ с других устройств в LAN:
+#   1) В .env укажите LAN_HOST=<IP этого ПК>
+#   2) http://<LAN_HOST>:3780
+#
+# Данные на диске Windows (не Docker volume):
+#   server/data/     — SQLite + collab-office-files (документы) + archives/ (архивы удалённых групп)
+#   server/uploads/  — вложения чата
+#
+# OnlyOffice JWT (опционально, для production):
+#   В onlyoffice.environment задайте JWT_ENABLED: 'true' и JWT_SECRET, совпадающий с ONLYOFFICE_JWT_SECRET на API.
+#   По умолчанию JWT отключён — локальный Docker работает без доп. настройки.
+
+services:
+  localchat:
+    build: .
+    container_name: localchat
+    ports:
+      - '3780:3780'
+    depends_on:
+      - onlyoffice
+    environment:
+      NODE_ENV: production
+      PORT: '3780'
+      HOST: 0.0.0.0
+      # ОБЯЗАТЕЛЬНО задайте свой JWT_SECRET (случайная строка 32+ символов):
+      # с известным дефолтом production-сервер теперь не стартует
+      JWT_SECRET: ${JWT_SECRET:-docker-dev-change-jwt-secret}
+      # Адрес производственного учёта УТК — включает кнопку «Учёт УТК» в сайдбаре
+      UCHET_URL: ${UCHET_URL:-}
+      # Plain HTTP LAN: do not set Secure cookies or CSP upgrade-insecure-requests (see USE_HTTPS / COOKIE_SECURE).
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3780,http://127.0.0.1:3780,http://localchat:3780,http://${LAN_HOST:-localhost}:3780}
+      ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-http://${LAN_HOST:-localhost}:${ONLYOFFICE_PORT:-8081}}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localchat:3780}
+    volumes:
+      - ./server/data:/app/server/data
+      - ./server/uploads:/app/server/uploads
+
+  onlyoffice:
+    image: onlyoffice/documentserver:latest
+    container_name: localchat-onlyoffice
+    ports:
+      - '${ONLYOFFICE_PORT:-8081}:80'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      JWT_ENABLED: 'false'
+      ALLOW_PRIVATE_IP_ADDRESS: 'true'

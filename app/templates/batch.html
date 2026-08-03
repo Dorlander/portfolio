@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ b.product }} / акт {{ b.act_number }}{% endblock %}
+{% block content %}
+<p><a href="/">← к журналу</a></p>
+<h1>{{ b.product }} — акт {{ b.act_number }}
+    <span class="status s-{{ b.status | replace(' ', '-') }}">{{ b.status }}</span>
+</h1>
+<p class="muted">Изделие не отделяется от своего акта и в конце цикла всегда возвращается в акт.</p>
+
+<div class="cols">
+    <section class="panel">
+        <h2>Данные</h2>
+        <form method="post" action="/batches/{{ b.id }}/edit" class="grid-form">
+            <label>Кол-во <input name="quantity" type="number" value="{{ b.quantity }}" required></label>
+            <label>К отгрузке (план) <input name="planned_ship" type="datetime-local"
+                value="{{ b.planned_ship_at.strftime('%Y-%m-%dT%H:%M') if b.planned_ship_at else '' }}"></label>
+            <label>Отгружен (факт) <input name="actual_ship" type="datetime-local"
+                value="{{ b.actual_ship_at.strftime('%Y-%m-%dT%H:%M') if b.actual_ship_at else '' }}"></label>
+            <label>Примечание <input name="note" value="{{ b.note or '' }}"></label>
+            <button type="submit">Сохранить</button>
+        </form>
+        <dl class="facts">
+            <dt>Принят</dt><dd>{{ b.accepted_at.strftime('%d.%m.%Y %H:%M') if b.accepted_at else '—' }}</dd>
+            <dt>Взял в работу</dt><dd>{{ b.taken_by or '—' }}</dd>
+            <dt>Выходной контроль</dt><dd>{{ b.output_control_by or '—' }}</dd>
+            <dt>Акт несоответствия</dt><dd>{{ b.nc_act_number or '—' }}</dd>
+            <dt>В ремонте</dt><dd>{{ b.repair_qty or 0 }}</dd>
+        </dl>
+    </section>
+
+    <section class="panel">
+        <h2>Смена статуса</h2>
+        <form method="post" action="/batches/{{ b.id }}/status" class="grid-form">
+            <label>Новый статус
+                <select name="status">
+                    {% for s in statuses %}
+                    <option value="{{ s }}" {% if s == b.status %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Кто выполняет <input name="by_whom" placeholder="Т-25 / Фамилия"></label>
+            <label>Комментарий <input name="comment"></label>
+            <button type="submit">Применить</button>
+        </form>
+        <h3>История</h3>
+        <ul class="timeline">
+            {% for e in b.history | reverse %}
+            <li><b>{{ e.at.strftime('%d.%m %H:%M') }}</b> — {{ e.status }}
+                {% if e.by_whom %}<span class="muted">({{ e.by_whom }})</span>{% endif %}
+                {% if e.comment %}<br><span class="muted">{{ e.comment }}</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+</div>
+
+<section class="panel">
+    <h2>Несоответствия / дефекты</h2>
+    <form method="post" action="/batches/{{ b.id }}/defects" class="grid-form">
+        <label>Тип
+            <select name="kind">
+                {% for t in defect_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>Кол-во <input name="quantity" type="number" value="1" min="1"></label>
+        <label>№ ярлыка <input name="label_number"></label>
+        <label>№ акта несоот. <input name="nc_act_number" value="{{ b.nc_act_number or '' }}"></label>
+        <label>Тестировщик <input name="reported_by" placeholder="Т-25"></label>
+        <label>Описание <input name="description"></label>
+        <button type="submit">Зафиксировать</button>
+    </form>
+    <p class="muted">«Массовый» (одинаковый дефект более чем в 2 изделиях) автоматически останавливает акт до решения разработчика. «Аппаратная поломка» уходит в изолятор. «На анализ» — не диагностируется на месте, изделие передаётся разработчику.</p>
+    <table>
+        <thead><tr><th>Дата</th><th>Тип</th><th>Кол-во</th><th>Ярлык</th><th>Состояние</th><th>Тестировщик</th><th>Описание</th><th></th></tr></thead>
+        <tbody>
+        {% for d in b.defects %}
+        <tr>
+            <td>{{ d.created_at.strftime('%d.%m %H:%M') }}</td>
+            <td>{{ d.kind }}</td>
+            <td>{{ d.quantity }}</td>
+            <td>{{ d.label_number or '' }}</td>
+            <td>{{ d.state }}{% if d.resolved_at %} ({{ d.resolved_at.strftime('%d.%m') }}){% endif %}</td>
+            <td>{{ d.reported_by or '' }}</td>
+            <td>{{ d.description or '' }}</td>
+            <td>
+                {% if d.state != 'Возвращён в акт' %}
+                <form method="post" action="/defects/{{ d.id }}/state" class="inline">
+                    <select name="state">
+                        {% for s in defect_states %}
+                        <option value="{{ s }}" {% if s == d.state %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">OK</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="empty">Дефектов нет</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
